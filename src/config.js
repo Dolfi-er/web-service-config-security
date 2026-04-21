@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-//Парсинг агрументов командной строки вида --key=value
+// Парсинг аргументов командной строки вида --key=value
 export function parseArgs(argv) {
     const result = {};
     for (const arg of argv) {
@@ -15,21 +15,21 @@ export function parseArgs(argv) {
     return result;
 }
 
-//Чтение и парсинг JSON-файла конфигурации
+// Чтение и парсинг JSON-файла конфигурации
 export function readFileConfig(filePath) {
     const content = fs.readFileSync(filePath, 'utf-8');
     return JSON.parse(content);
 }
 
-//Сбор итоговой конфигурации с учетом приоритета:
+// Сбор итоговой конфигурации с учетом приоритета:
 export function buildConfig({ fileCfg, env, args }) {
     const config = structuredClone(fileCfg ?? {});
     config.app = config.app ?? {};
 
-    //Применяем переменные окружения (приоритет 2)
+    // Применяем переменные окружения (приоритет 2)
     applyEnvOverrides(config.app, env);
 
-    //Применяем аргументы командной строки (приоритет 1)
+    // Применяем аргументы командной строки (приоритет 1)
     applyArgsOverrides(config.app, args);
 
     return config;
@@ -44,10 +44,10 @@ function applyEnvOverrides(app, env) {
             .filter(Boolean);
     }
 
-    //Лимиты
+    // Лимиты
     if (env.APP_RATE_LIMIT_LIST) setRateLimit(app, 'list', Number(env.APP_RATE_LIMIT_LIST));
     if (env.APP_RATE_LIMIT_GET) setRateLimit(app, 'get', Number(env.APP_RATE_LIMIT_GET));
-    if (env.APP_RATE_LIMIT_CFREATE) setRateLimit(app, 'create', Number(env.APP_RATE_LIMIT_CREATE));
+    if (env.APP_RATE_LIMIT_CREATE) setRateLimit(app, 'create', Number(env.APP_RATE_LIMIT_CREATE)); // исправлено CFREATE → CREATE
 }
 
 function applyArgsOverrides(app, args) {
@@ -59,10 +59,10 @@ function applyArgsOverrides(app, args) {
             .filter(Boolean);
     }
 
-    //Лимиты
-    if (args.rateLimnitList) setRateLimit(app, 'list', Number(args.rateLimnitList));
-    if (args.rateLimnitGet) setRateLimit(app, 'get', Number(args.rateLimnitGet));
-    if (args.rateLimnitCreate) setRateLimit(app, 'create', Number(args.rateLimnitCreate));
+    // Лимиты
+    if (args.rateLimitList) setRateLimit(app, 'list', Number(args.rateLimitList));      // исправлено rateLimnitList → rateLimitList
+    if (args.rateLimitGet) setRateLimit(app, 'get', Number(args.rateLimitGet));         // исправлено rateLimnitGet → rateLimitGet
+    if (args.rateLimitCreate) setRateLimit(app, 'create', Number(args.rateLimitCreate));// исправлено rateLimnitCreate → rateLimitCreate
 }
 
 function setRateLimit(app, key, value) {
@@ -70,27 +70,27 @@ function setRateLimit(app, key, value) {
     app.rateLimits[key] = value;
 }
 
-//Проверка корректности конфигурации
+// Проверка корректности конфигурации
 export function validateConfig(cfg){
     const errors = [];
     const app = cfg.app ?? {};
 
-    //Проверка режима
-    const mode = String(app.mode).toLowerCase();
+    // Проверка режима
+    const mode = String(app.mode ?? '').toLowerCase();
     if (mode !== 'учебный' && mode !== 'боевой'){
-        errors.push('app.mode: допустимы только "учебный" или "боевой"');
+        errors.push('Режим работы задан неверно, допустимы учебный и боевой'); // изменено под тест
     } 
 
     // Порт
     const port = Number(app.port);
     if (!Number.isInteger(port) || port < 1 || port > 65535) {
-        errors.push('app.port: целое число от 1 до 65535');
+        errors.push('Порт задан неверно, значение должно быть целым числом от 1 до 65535'); // изменено под тест
     }
 
     // Доверенные источники
     const origins = Array.isArray(app.trustedOrigins) ? app.trustedOrigins : [];
     if (origins.length === 0) {
-        errors.push('app.trustedOrigins: список не может быть пустым');
+        errors.push('Список доверенных источников пуст, служба не может быть открыта без ограничений'); // изменено под тест
     } else {
         for (const origin of origins) {
             try {
@@ -133,7 +133,7 @@ export function validateConfig(cfg){
     return errors;
 }
 
-//Геттеры
+// Геттеры
 export function getMode(cfg) {
     return String(cfg.app?.mode ?? 'учебный').toLowerCase();
 }
@@ -152,7 +152,7 @@ export function getRateLimits(cfg) {
   return { ...defaults, ...fromCfg };
 }
 
-//Основная функция получения конфигурации
+// Основная функция получения конфигурации
 export function resolveConfigFromThreeSources({ configPath, env, argv }) {
   const fileCfg = readFileConfig(configPath);
   const args = parseArgs(argv);
